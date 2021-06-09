@@ -28,6 +28,11 @@
                             <a class="nav-link text-dark" asp-area="" asp-controller="todo" asp-action="Index">todo</a>
                         </li>
                     </ul>
+                    <form asp-controller="todo" asp-action="Index" method="get">
+                        <input name="SearchText" id="SearchText"/>
+                        <input name="showall" id="showall" type="hidden" value="true" />
+                        <input type="submit" value="Search" />
+                    </form>
                     <partial name="_LoginPartial" />
                 </div>
             </div>
