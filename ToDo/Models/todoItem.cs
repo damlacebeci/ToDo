@@ -32,7 +32,7 @@ namespace ToDo.Models
         {
             get
             {
-                var remainingTime = ( DateTime.Now - DueDate );
+                var remainingTime = (DueDate - DateTime.Now );
                 return (int)remainingTime.TotalHours;
             }
         }
