@@ -22,7 +22,8 @@ namespace ToDo.Controllers
         // GET: Categories
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Categories.ToListAsync());
+            var items = await _context.Categories.ToListAsync();
+            return View(items);
         }
 
         // GET: Categories/Details/5

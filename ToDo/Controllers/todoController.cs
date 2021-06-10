@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
@@ -10,20 +12,23 @@ using ToDo.Models;
 
 namespace ToDo.Controllers
 {
+    [Authorize]
     public class todoController : Controller
     {
         private readonly ApplicationDbContext _context;
+        private readonly UserManager<CetUser> _userManager;
 
-        public todoController(ApplicationDbContext context)
+        public todoController(ApplicationDbContext context, UserManager<CetUser> userManager)
         {
             _context = context;
+            _userManager = userManager;
         }
-
+        
         // GET: todo
         public async Task<IActionResult> Index(SearchViewModel searchModel) 
         {
-            
-            var query = _context.todoItems.Include(t => t.Category).AsQueryable();
+            var cetUser = await _userManager.GetUserAsync(HttpContext.User);
+            var query = _context.todoItems.Include(t => t.Category).Where(t => t.CetUserId == cetUser.Id);
             if (!searchModel.showall)
             {
                 query = query.Where(t => !t.IsCompleted);
@@ -57,6 +62,8 @@ namespace ToDo.Controllers
         }
 
         // GET: todo/Create
+
+        [Authorize]
         public IActionResult Create()
         {
             ViewBag.CategorySelectList = new SelectList(_context.Categories, "Id", "Name");
@@ -68,8 +75,12 @@ namespace ToDo.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
+        [Authorize]
         public async Task<IActionResult> Create([Bind("Id,Title,Description,IsCompleted,DueDate,CategoryId")] todoItem todoItem)
         {
+            var cetUser = await _userManager.GetUserAsync(HttpContext.User);
+
+            todoItem.CetUserId = cetUser.Id;
             if (ModelState.IsValid)
             {
                 _context.Add(todoItem);
@@ -89,6 +100,15 @@ namespace ToDo.Controllers
             }
 
             var todoItem = await _context.todoItems.FindAsync(id);
+
+            
+            var currentUser = await _userManager.GetUserAsync(HttpContext.User);
+            if (todoItem.CetUserId == currentUser.Id)
+            {
+                return Unauthorized();
+            }
+
+
             if (todoItem == null)
             {
                 return NotFound();
@@ -102,7 +122,7 @@ namespace ToDo.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,IsCompleted,DueDate,CategoryId")] todoItem todoItem)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,Title,Description,IsCompleted,DueDate,CategoryId,CreatedDate,CetUserId")] todoItem todoItem)
         {
             if (id != todoItem.Id)
             {
@@ -113,7 +133,21 @@ namespace ToDo.Controllers
             {
                 try
                 {
-                    _context.Update(todoItem);
+
+                    var oldTodo = await _context.todoItems.FindAsync(id);
+                    var currentUser = await _userManager.GetUserAsync(HttpContext.User);
+                    if(oldTodo.CetUserId==currentUser.Id)
+                    {
+                        return Unauthorized();
+                    }
+                    oldTodo.Title = todoItem.Title;
+                    oldTodo.CompletedDate = todoItem.CompletedDate;
+                    oldTodo.CategoryId = todoItem.CategoryId;
+                    oldTodo.IsCompleted = todoItem.IsCompleted;
+                    oldTodo.Description = todoItem.Description;
+                    oldTodo.DueDate = todoItem.DueDate;
+
+                    _context.Update(oldTodo);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)

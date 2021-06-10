@@ -12,6 +12,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using ToDo.Data;
+using ToDo.Models;
 
 namespace ToDo
 {
@@ -32,7 +33,13 @@ namespace ToDo
                     Configuration.GetConnectionString("DefaultConnection")));
             services.AddDatabaseDeveloperPageExceptionFilter();
 
-            services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
+            services.AddDefaultIdentity<CetUser>(options =>
+            {
+                options.SignIn.RequireConfirmedAccount = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                
+                }
+            )
                 .AddEntityFrameworkStores<ApplicationDbContext>();
             services.AddControllersWithViews();
         }
